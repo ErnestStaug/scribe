@@ -186,22 +186,26 @@ class Writer
     {
         // Make output a Blade view
         if (!is_dir($this->outputPath)) {
-            mkdir($this->outputPath);
+            if (!mkdir($concurrentDirectory = $this->outputPath) && !is_dir($concurrentDirectory)) {
+                throw new \RuntimeException(sprintf('Directory "%s" was not created', $concurrentDirectory));
+            }
         }
 
         rename("{$this->outputPath}/index.html", "$this->outputPath/index.blade.php");
         // Move assets from public/docs to public/vendor/scribe
         // We need to do this delete first, otherwise move won't work if folder exists
         Utils::deleteDirectoryAndContents("public/vendor/scribe/", getcwd());
-        rename("{$this->outputPath}/", "public/vendor/scribe/");
-
         $contents = file_get_contents("$this->outputPath/index.blade.php");
+        rename("{$this->outputPath}/", "public/vendor/scribe/");
 
         // Rewrite links to go through Laravel
         $contents = preg_replace('#href="css/(.+?)"#', 'href="{{ asset("vendor/scribe/css/$1") }}"', $contents);
         $contents = preg_replace('#src="(js|images)/(.+?)"#', 'src="{{ asset("vendor/scribe/$1/$2") }}"', $contents);
         $contents = str_replace('href="./collection.json"', 'href="{{ route("scribe.json") }}"', $contents);
 
+        if (!mkdir($concurrentDirectory = $this->outputPath) && !is_dir($concurrentDirectory)) {
+            throw new \RuntimeException(sprintf('Directory "%s" was not created', $concurrentDirectory));
+        }
         file_put_contents("$this->outputPath/index.blade.php", $contents);
     }
 
